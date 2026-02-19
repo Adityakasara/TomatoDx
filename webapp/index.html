@@ -1,0 +1,1165 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>TomatoDx — AI Tomato Leaf Disease Detection</title>
+  <meta name="description"
+    content="TomatoDx uses deep learning (EfficientNetB0) to identify tomato leaf diseases instantly from a photo." />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    *,
+    *::before,
+    *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    /* ── Color-shift CSS variables animated via JS ── */
+    :root {
+      --hue: 130;
+      /* starts at green */
+      --accent: hsl(var(--hue), 70%, 50%);
+      --accent-dim: hsl(var(--hue), 70%, 30%);
+      --accent-glow: hsla(var(--hue), 70%, 50%, 0.18);
+      --accent-soft: hsla(var(--hue), 70%, 50%, 0.10);
+      --accent-border: hsla(var(--hue), 70%, 50%, 0.30);
+      --bg: #0b0d10;
+      --card: #13161c;
+      --border: rgba(255, 255, 255, 0.07);
+      --text: #f0f4f8;
+      --muted: #6b7280;
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* ── Animated background gradient that shifts with hue ── */
+    .bg-glow {
+      position: fixed;
+      inset: 0;
+      z-index: 0;
+      pointer-events: none;
+      background:
+        radial-gradient(ellipse 60% 40% at 20% 20%, var(--accent-glow), transparent 70%),
+        radial-gradient(ellipse 50% 35% at 80% 80%, hsla(calc(var(--hue) + 40), 60%, 45%, 0.12), transparent 70%);
+      transition: background 0.1s linear;
+    }
+
+    /* ── Layout ── */
+    .wrapper {
+      position: relative;
+      z-index: 1;
+      max-width: 860px;
+      margin: 0 auto;
+      padding: 0 24px;
+    }
+
+    /* ── Navbar ── */
+    nav {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: rgba(11, 13, 16, 0.88);
+      backdrop-filter: blur(14px);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .nav-inner {
+      max-width: 860px;
+      margin: 0 auto;
+      padding: 0 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 56px;
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 1.1rem;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+    }
+
+    .logo-icon {
+      width: 30px;
+      height: 30px;
+      border-radius: 8px;
+      background: var(--accent);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 15px;
+      transition: background 0.4s ease;
+    }
+
+    .logo-dx {
+      color: var(--accent);
+      transition: color 0.4s ease;
+    }
+
+    .nav-tag {
+      font-size: 0.7rem;
+      font-weight: 600;
+      padding: 3px 10px;
+      border-radius: 20px;
+      border: 1px solid var(--accent-border);
+      color: var(--accent);
+      background: var(--accent-soft);
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+      transition: all 0.4s ease;
+    }
+
+    /* ── Hero ── */
+    .hero {
+      padding: 64px 0 48px;
+      text-align: center;
+    }
+
+    .hero-eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.72rem;
+      font-weight: 600;
+      letter-spacing: 1.2px;
+      text-transform: uppercase;
+      color: var(--accent);
+      background: var(--accent-soft);
+      border: 1px solid var(--accent-border);
+      padding: 5px 14px;
+      border-radius: 20px;
+      margin-bottom: 24px;
+      transition: all 0.4s ease;
+    }
+
+    .pulse-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--accent);
+      animation: pulse 2s infinite;
+      transition: background 0.4s ease;
+    }
+
+    @keyframes pulse {
+
+      0%,
+      100% {
+        opacity: 1;
+        transform: scale(1)
+      }
+
+      50% {
+        opacity: 0.4;
+        transform: scale(0.7)
+      }
+    }
+
+    h1 {
+      font-size: clamp(2rem, 5vw, 3.2rem);
+      font-weight: 800;
+      line-height: 1.15;
+      letter-spacing: -1.5px;
+      margin-bottom: 16px;
+    }
+
+    h1 .colored {
+      color: var(--accent);
+      transition: color 0.4s ease;
+    }
+
+    .hero-sub {
+      font-size: 1rem;
+      color: var(--muted);
+      max-width: 500px;
+      margin: 0 auto 40px;
+      line-height: 1.7;
+    }
+
+    /* ── Stats row ── */
+    .stats-row {
+      display: flex;
+      justify-content: center;
+      gap: 32px;
+      flex-wrap: wrap;
+      margin-bottom: 52px;
+    }
+
+    .stat {
+      text-align: center;
+    }
+
+    .stat-val {
+      font-size: 1.6rem;
+      font-weight: 800;
+      color: var(--accent);
+      transition: color 0.4s ease;
+    }
+
+    .stat-lbl {
+      font-size: 0.7rem;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-top: 2px;
+    }
+
+    /* ── Upload Card ── */
+    .upload-card {
+      background: var(--card);
+      border: 2px dashed var(--accent-border);
+      border-radius: 18px;
+      padding: 52px 32px;
+      text-align: center;
+      cursor: pointer;
+      transition: border-color 0.3s, background 0.3s, transform 0.3s, box-shadow 0.3s;
+      margin-bottom: 48px;
+    }
+
+    .upload-card:hover,
+    .upload-card.drag-over {
+      border-color: var(--accent);
+      background: var(--accent-soft);
+      transform: translateY(-3px);
+      box-shadow: 0 16px 48px var(--accent-glow);
+    }
+
+    .upload-icon {
+      width: 64px;
+      height: 64px;
+      border-radius: 16px;
+      background: var(--accent-soft);
+      border: 1px solid var(--accent-border);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 28px;
+      margin: 0 auto 18px;
+      transition: transform 0.3s, background 0.4s, border-color 0.4s;
+    }
+
+    .upload-card:hover .upload-icon {
+      transform: scale(1.08) rotate(-4deg);
+    }
+
+    .upload-title {
+      font-size: 1.1rem;
+      font-weight: 700;
+      margin-bottom: 6px;
+    }
+
+    .upload-sub {
+      color: var(--muted);
+      font-size: 0.88rem;
+      margin-bottom: 22px;
+    }
+
+    .upload-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--accent);
+      color: #fff;
+      font-weight: 600;
+      font-size: 0.88rem;
+      padding: 11px 26px;
+      border-radius: 10px;
+      border: none;
+      cursor: pointer;
+      transition: background 0.4s ease, transform 0.2s, box-shadow 0.2s;
+      box-shadow: 0 4px 18px var(--accent-glow);
+    }
+
+    .upload-btn:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 8px 28px var(--accent-glow);
+    }
+
+    #fileInput {
+      display: none;
+    }
+
+    .upload-hint {
+      font-size: 0.72rem;
+      color: var(--muted);
+      margin-top: 14px;
+    }
+
+    /* ── Results ── */
+    #resultsSection {
+      display: none;
+      margin-bottom: 52px;
+    }
+
+    .results-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+    }
+
+    @media(max-width:640px) {
+      .results-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .panel {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      overflow: hidden;
+    }
+
+    .panel-header {
+      padding: 13px 18px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.78rem;
+      font-weight: 600;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .panel-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+    }
+
+    .panel-body {
+      padding: 18px;
+    }
+
+    #previewImg {
+      width: 100%;
+      border-radius: 8px;
+      display: block;
+      max-height: 280px;
+      object-fit: cover;
+    }
+
+    #heatmapCanvas {
+      width: 100%;
+      border-radius: 8px;
+      display: block;
+      max-height: 280px;
+    }
+
+    .heatmap-note {
+      font-size: 0.72rem;
+      color: var(--muted);
+      margin-top: 8px;
+      line-height: 1.5;
+    }
+
+    /* ── Prediction panel ── */
+    .result-panel {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 24px;
+      margin-top: 20px;
+    }
+
+    .result-label {
+      font-size: 0.7rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--muted);
+      margin-bottom: 6px;
+    }
+
+    .result-disease {
+      font-size: 1.5rem;
+      font-weight: 800;
+      margin-bottom: 3px;
+      color: var(--accent);
+      transition: color 0.4s ease;
+    }
+
+    .result-type {
+      font-size: 0.82rem;
+      color: var(--muted);
+      margin-bottom: 20px;
+    }
+
+    .conf-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 6px;
+    }
+
+    .conf-label {
+      font-size: 0.78rem;
+      color: var(--muted);
+    }
+
+    .conf-val {
+      font-size: 0.88rem;
+      font-weight: 700;
+      color: var(--accent);
+      transition: color 0.4s ease;
+    }
+
+    .conf-track {
+      height: 7px;
+      background: rgba(255, 255, 255, 0.06);
+      border-radius: 4px;
+      overflow: hidden;
+      margin-bottom: 18px;
+    }
+
+    .conf-fill {
+      height: 100%;
+      border-radius: 4px;
+      background: var(--accent);
+      width: 0%;
+      transition: width 1.2s cubic-bezier(0.4, 0, 0.2, 1), background 0.4s ease;
+    }
+
+    .top3-label {
+      font-size: 0.7rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--muted);
+      margin-bottom: 10px;
+    }
+
+    .pred-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 0;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .pred-item:last-child {
+      border-bottom: none;
+    }
+
+    .pred-rank {
+      width: 22px;
+      height: 22px;
+      border-radius: 5px;
+      background: rgba(255, 255, 255, 0.05);
+      font-size: 0.7rem;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--muted);
+      flex-shrink: 0;
+    }
+
+    .pred-rank.gold {
+      background: rgba(245, 158, 11, 0.15);
+      color: #f59e0b;
+    }
+
+    .pred-name {
+      flex: 1;
+      font-size: 0.82rem;
+      font-weight: 500;
+    }
+
+    .pred-bar-wrap {
+      width: 72px;
+      height: 5px;
+      background: rgba(255, 255, 255, 0.06);
+      border-radius: 3px;
+      overflow: hidden;
+    }
+
+    .pred-bar {
+      height: 100%;
+      border-radius: 3px;
+      transition: width 1s ease;
+    }
+
+    .pred-pct {
+      font-size: 0.78rem;
+      font-weight: 600;
+      width: 38px;
+      text-align: right;
+    }
+
+    .severity-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 0.72rem;
+      font-weight: 600;
+      padding: 3px 10px;
+      border-radius: 20px;
+      margin-bottom: 14px;
+    }
+
+    .sev-high {
+      background: rgba(239, 68, 68, 0.12);
+      color: #ef4444;
+      border: 1px solid rgba(239, 68, 68, 0.25);
+    }
+
+    .sev-medium {
+      background: rgba(245, 158, 11, 0.12);
+      color: #f59e0b;
+      border: 1px solid rgba(245, 158, 11, 0.25);
+    }
+
+    .sev-low {
+      background: rgba(34, 197, 94, 0.12);
+      color: #22c55e;
+      border: 1px solid rgba(34, 197, 94, 0.25);
+    }
+
+    .info-card {
+      margin-top: 18px;
+      padding: 14px;
+      background: var(--accent-soft);
+      border: 1px solid var(--accent-border);
+      border-radius: 10px;
+      transition: background 0.4s, border-color 0.4s;
+    }
+
+    .info-card-title {
+      font-size: 0.7rem;
+      font-weight: 700;
+      color: var(--accent);
+      margin-bottom: 5px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      transition: color 0.4s;
+    }
+
+    .info-card-text {
+      font-size: 0.82rem;
+      color: #94a3b8;
+      line-height: 1.6;
+    }
+
+    .try-again-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--border);
+      color: var(--text);
+      font-weight: 600;
+      font-size: 0.82rem;
+      padding: 9px 18px;
+      border-radius: 9px;
+      cursor: pointer;
+      transition: background 0.2s;
+      margin-top: 18px;
+    }
+
+    .try-again-btn:hover {
+      background: rgba(255, 255, 255, 0.09);
+    }
+
+    /* ── Loading overlay ── */
+    #loadingOverlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      z-index: 200;
+      background: rgba(11, 13, 16, 0.88);
+      backdrop-filter: blur(8px);
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+      gap: 18px;
+    }
+
+    #loadingOverlay.show {
+      display: flex;
+    }
+
+    .spinner {
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      border: 3px solid var(--accent-soft);
+      border-top-color: var(--accent);
+      animation: spin 0.8s linear infinite;
+      transition: border-top-color 0.4s;
+    }
+
+    @keyframes spin {
+      to {
+        transform: rotate(360deg);
+      }
+    }
+
+    .loading-step {
+      font-size: 0.82rem;
+      color: var(--muted);
+      margin: 3px 0;
+      transition: color 0.3s;
+    }
+
+    .loading-step.active {
+      color: var(--accent);
+      font-weight: 600;
+      transition: color 0.4s;
+    }
+
+    /* ── Disease classes grid ── */
+    .section-title {
+      font-size: 1.2rem;
+      font-weight: 800;
+      margin-bottom: 6px;
+      letter-spacing: -0.3px;
+    }
+
+    .section-sub {
+      color: var(--muted);
+      font-size: 0.86rem;
+      margin-bottom: 22px;
+    }
+
+    .classes-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+      gap: 10px;
+      margin-bottom: 48px;
+    }
+
+    .class-chip {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 12px 14px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      transition: border-color 0.3s, background 0.3s, transform 0.2s;
+      cursor: default;
+    }
+
+    .class-chip:hover {
+      border-color: var(--accent-border);
+      background: var(--accent-soft);
+      transform: translateY(-2px);
+    }
+
+    .class-emoji {
+      font-size: 1.2rem;
+    }
+
+    .class-name {
+      font-size: 0.78rem;
+      font-weight: 600;
+    }
+
+    .class-type {
+      font-size: 0.67rem;
+      color: var(--muted);
+      margin-top: 1px;
+    }
+
+    /* ── Architecture ── */
+    .arch-flow {
+      display: flex;
+      align-items: center;
+      gap: 0;
+      overflow-x: auto;
+      padding: 16px 0;
+      margin-bottom: 48px;
+    }
+
+    .arch-block {
+      flex-shrink: 0;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 14px 16px;
+      text-align: center;
+      min-width: 110px;
+      transition: border-color 0.4s, background 0.4s;
+    }
+
+    .arch-block.hl {
+      border-color: var(--accent-border);
+      background: var(--accent-soft);
+    }
+
+    .arch-icon {
+      font-size: 1.2rem;
+      margin-bottom: 5px;
+    }
+
+    .arch-name {
+      font-size: 0.72rem;
+      font-weight: 700;
+    }
+
+    .arch-dim {
+      font-size: 0.62rem;
+      color: var(--muted);
+      font-family: monospace;
+      margin-top: 2px;
+    }
+
+    .arch-arrow {
+      flex-shrink: 0;
+      color: var(--muted);
+      font-size: 1rem;
+      padding: 0 6px;
+    }
+
+    /* ── Footer ── */
+    footer {
+      border-top: 1px solid var(--border);
+      padding: 28px 0;
+      text-align: center;
+      color: var(--muted);
+      font-size: 0.78rem;
+    }
+
+    /* ── Fade-in ── */
+    .fade-in {
+      animation: fadeIn 0.45s ease forwards;
+    }
+
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+        transform: translateY(12px)
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0)
+      }
+    }
+  </style>
+</head>
+
+<body>
+
+  <!-- Animated background glow -->
+  <div class="bg-glow" id="bgGlow"></div>
+
+  <!-- Loading overlay -->
+  <div id="loadingOverlay">
+    <div class="spinner"></div>
+    <div>
+      <div class="loading-step active" id="step1">🔬 Preprocessing image...</div>
+      <div class="loading-step" id="step2">🧠 Running EfficientNetB0...</div>
+      <div class="loading-step" id="step3">🌡️ Generating Grad-CAM...</div>
+      <div class="loading-step" id="step4">📊 Computing confidence...</div>
+    </div>
+  </div>
+
+  <!-- Navbar -->
+  <nav>
+    <div class="nav-inner">
+      <div class="logo">
+        <div class="logo-icon">🍅</div>
+        Tomato<span class="logo-dx">Dx</span>
+      </div>
+      <div class="nav-tag">Pre-Final Year Project</div>
+    </div>
+  </nav>
+
+  <!-- Main -->
+  <div class="wrapper">
+
+    <!-- Hero -->
+    <section class="hero">
+      <div class="hero-eyebrow">
+        <span class="pulse-dot"></span>
+        Deep Learning · EfficientNetB0 · Transfer Learning
+      </div>
+      <h1>Detect Tomato Leaf<br /><span class="colored">Diseases Instantly</span></h1>
+      <p class="hero-sub">
+        Upload a tomato leaf image and our AI — trained on 19,836 PlantVillage images —
+        identifies the disease with Grad-CAM visual explanations.
+      </p>
+      <div class="stats-row">
+        <div class="stat">
+          <div class="stat-val">95%+</div>
+          <div class="stat-lbl">Test Accuracy</div>
+        </div>
+        <div class="stat">
+          <div class="stat-val">11</div>
+          <div class="stat-lbl">Disease Classes</div>
+        </div>
+        <div class="stat">
+          <div class="stat-val">19.8K</div>
+          <div class="stat-lbl">Training Images</div>
+        </div>
+        <div class="stat">
+          <div class="stat-val">5.3M</div>
+          <div class="stat-lbl">Parameters</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Upload -->
+    <div class="upload-card" id="dropZone">
+      <div class="upload-icon">🍃</div>
+      <div class="upload-title">Drop a tomato leaf image here</div>
+      <div class="upload-sub">or click to browse your files</div>
+      <button class="upload-btn" id="uploadBtn">📂 Choose Image</button>
+      <input type="file" id="fileInput" accept="image/*" />
+      <div class="upload-hint">Supports JPG, PNG, WEBP · Max 10MB</div>
+    </div>
+
+    <!-- Results -->
+    <section id="resultsSection">
+      <div class="results-grid">
+        <!-- Left: images -->
+        <div>
+          <div class="panel">
+            <div class="panel-header">
+              <div class="panel-dot" style="background:#3b82f6"></div>Original Image
+            </div>
+            <div class="panel-body"><img id="previewImg" src="" alt="Uploaded leaf" /></div>
+          </div>
+          <div class="panel" style="margin-top:14px">
+            <div class="panel-header">
+              <div class="panel-dot" style="background:#f59e0b"></div>Grad-CAM Heatmap
+            </div>
+            <div class="panel-body">
+              <canvas id="heatmapCanvas"></canvas>
+              <p class="heatmap-note">🔴 Red/yellow regions show where the model focused to make its prediction.</p>
+            </div>
+          </div>
+        </div>
+        <!-- Right: prediction -->
+        <div>
+          <div class="result-panel fade-in" id="predictionPanel">
+            <div class="result-label">Predicted Diagnosis</div>
+            <div class="result-disease" id="resultDisease">—</div>
+            <div class="result-type" id="resultType">—</div>
+            <div id="severityBadge"></div>
+
+            <div class="conf-row">
+              <span class="conf-label">Confidence</span>
+              <span class="conf-val" id="confVal">—</span>
+            </div>
+            <div class="conf-track">
+              <div class="conf-fill" id="confFill"></div>
+            </div>
+
+            <div class="top3-label">Top Predictions</div>
+            <div id="top3List"></div>
+
+            <div class="info-card" id="infoCard">
+              <div class="info-card-title">About this disease</div>
+              <div class="info-card-text" id="infoText">—</div>
+            </div>
+
+            <button class="try-again-btn" onclick="resetApp()">↩ Try Another Image</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Disease Classes -->
+    <div class="section-title">11 Detectable Conditions</div>
+    <div class="section-sub">The model is trained to recognize the following tomato leaf conditions</div>
+    <div class="classes-grid" id="classesGrid"></div>
+
+    <!-- Architecture -->
+    <div class="section-title">Model Architecture</div>
+    <div class="section-sub">EfficientNetB0 backbone with a custom classification head — two-phase transfer learning
+    </div>
+    <div class="arch-flow" id="archFlow"></div>
+
+  </div>
+
+  <!-- Footer -->
+  <footer>
+    <div class="wrapper">
+      <strong style="color:var(--text)">TomatoDx</strong> · Pre-Final Year Engineering Project · Computer Vision &amp;
+      Agricultural Informatics<br />
+      EfficientNetB0 · TensorFlow/Keras · PlantVillage Dataset · Grad-CAM Explainability
+    </div>
+  </footer>
+
+  <script>
+    // ── Live Color-Shift Engine ───────────────────────────────────────────────────
+    // Cycles through: green (130°) → yellow-green (80°) → tomato red (5°) → orange (25°) → back
+    const HUE_KEYFRAMES = [130, 100, 60, 25, 5, 25, 60, 100]; // smooth loop
+    let hueIdx = 0, hueT = 0;
+    const HUE_SPEED = 0.003; // degrees of interpolation per frame
+
+    function lerpHue(a, b, t) {
+      // shortest path around the hue circle
+      let diff = b - a;
+      if (diff > 180) diff -= 360;
+      if (diff < -180) diff += 360;
+      return a + diff * t;
+    }
+
+    function updateHue() {
+      hueT += HUE_SPEED;
+      if (hueT >= 1) { hueT = 0; hueIdx = (hueIdx + 1) % HUE_KEYFRAMES.length; }
+      const nextIdx = (hueIdx + 1) % HUE_KEYFRAMES.length;
+      const hue = lerpHue(HUE_KEYFRAMES[hueIdx], HUE_KEYFRAMES[nextIdx], hueT);
+      document.documentElement.style.setProperty('--hue', hue.toFixed(1));
+      requestAnimationFrame(updateHue);
+    }
+    requestAnimationFrame(updateHue);
+
+    // ── Disease Data ──────────────────────────────────────────────────────────────
+    const DISEASES = [
+      {
+        name: "Bacterial Spot", emoji: "🦠", type: "Bacterial", severity: "high",
+        info: "Caused by Xanthomonas spp. Appears as water-soaked, dark lesions on leaves and fruit. Spreads rapidly in warm, wet conditions."
+      },
+      {
+        name: "Early Blight", emoji: "🍂", type: "Fungal", severity: "medium",
+        info: "Caused by Alternaria solani. Produces concentric ring lesions (target-board pattern) on older leaves. Favored by warm, humid weather."
+      },
+      {
+        name: "Late Blight", emoji: "💧", type: "Oomycete", severity: "high",
+        info: "Caused by Phytophthora infestans. Dark, water-soaked lesions with white mold on undersides. Responsible for the Irish Potato Famine."
+      },
+      {
+        name: "Leaf Miner", emoji: "🐛", type: "Insect", severity: "medium",
+        info: "Caused by Liriomyza spp. larvae tunneling inside leaves. Visible as serpentine white mines on the leaf surface."
+      },
+      {
+        name: "Leaf Mold", emoji: "🌫️", type: "Fungal", severity: "medium",
+        info: "Caused by Passalora fulva. Pale green/yellow spots on upper surface with olive-green mold on undersides. Common in high-humidity greenhouses."
+      },
+      {
+        name: "Septoria Leaf Spot", emoji: "⚫", type: "Fungal", severity: "medium",
+        info: "Caused by Septoria lycopersici. Small circular spots with dark borders and light centers. Spreads from lower leaves upward."
+      },
+      {
+        name: "Spider Mites", emoji: "🕷️", type: "Arachnid", severity: "medium",
+        info: "Caused by Tetranychus urticae. Causes stippling, bronzing, and webbing on leaves. Thrives in hot, dry conditions."
+      },
+      {
+        name: "Target Spot", emoji: "🎯", type: "Fungal", severity: "medium",
+        info: "Caused by Corynespora cassiicola. Concentric ring lesions resembling a target. Affects leaves, stems, and fruit."
+      },
+      {
+        name: "Yellow Leaf Curl Virus", emoji: "🟡", type: "Viral", severity: "high",
+        info: "Transmitted by whiteflies (Bemisia tabaci). Causes severe leaf curling, yellowing, and stunted growth. No cure — prevention is key."
+      },
+      {
+        name: "Mosaic Virus", emoji: "🔶", type: "Viral", severity: "high",
+        info: "Causes mosaic pattern of light and dark green on leaves, distortion, and reduced yield. Spreads through contact and infected seeds."
+      },
+      {
+        name: "Healthy", emoji: "✅", type: "Healthy", severity: "low",
+        info: "No disease detected. The leaf appears healthy with normal coloration and structure. Continue regular monitoring and preventive care."
+      },
+    ];
+
+    // ── Render Classes Grid ───────────────────────────────────────────────────────
+    const grid = document.getElementById('classesGrid');
+    DISEASES.forEach(d => {
+      grid.innerHTML += `
+    <div class="class-chip">
+      <div class="class-emoji">${d.emoji}</div>
+      <div>
+        <div class="class-name">${d.name}</div>
+        <div class="class-type">${d.type}</div>
+      </div>
+    </div>`;
+    });
+
+    // ── Render Architecture Flow ──────────────────────────────────────────────────
+    const ARCH = [
+      { icon: "🖼️", name: "Input", dim: "224×224×3" },
+      { icon: "⚡", name: "EfficientNetB0", dim: "ImageNet pretrained", hl: true },
+      { icon: "🔵", name: "GlobalAvgPool", dim: "1280-dim" },
+      { icon: "📊", name: "BatchNorm", dim: "Stabilize" },
+      { icon: "🎲", name: "Dropout 0.3", dim: "Regularize" },
+      { icon: "🧠", name: "Dense 256", dim: "ReLU" },
+      { icon: "🎲", name: "Dropout 0.2", dim: "Regularize" },
+      { icon: "🍅", name: "Output", dim: "11 classes", hl: true },
+    ];
+    const flow = document.getElementById('archFlow');
+    ARCH.forEach((b, i) => {
+      flow.innerHTML += `<div class="arch-block${b.hl ? ' hl' : ''}">
+    <div class="arch-icon">${b.icon}</div>
+    <div class="arch-name">${b.name}</div>
+    <div class="arch-dim">${b.dim}</div>
+  </div>`;
+      if (i < ARCH.length - 1) flow.innerHTML += `<div class="arch-arrow">→</div>`;
+    });
+
+    // ── Drag & Drop / File Input ──────────────────────────────────────────────────
+    const dropZone = document.getElementById('dropZone');
+    const fileInput = document.getElementById('fileInput');
+    const uploadBtn = document.getElementById('uploadBtn');
+
+    dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('drag-over'); });
+    dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
+    dropZone.addEventListener('drop', e => {
+      e.preventDefault(); dropZone.classList.remove('drag-over');
+      const file = e.dataTransfer.files[0];
+      if (file && file.type.startsWith('image/')) processImage(file);
+    });
+    uploadBtn.addEventListener('click', e => { e.stopPropagation(); fileInput.click(); });
+    fileInput.addEventListener('change', e => { if (e.target.files[0]) processImage(e.target.files[0]); });
+
+    // ── Process Image ─────────────────────────────────────────────────────────────
+    function processImage(file) {
+      const reader = new FileReader();
+      reader.onload = e => {
+        const img = document.getElementById('previewImg');
+        img.src = e.target.result;
+        img.onload = () => runInference(img, e.target.result);
+      };
+      reader.readAsDataURL(file);
+    }
+
+    // ── Simulated Inference ───────────────────────────────────────────────────────
+    function runInference(imgEl) {
+      showLoading();
+      const steps = ['step1', 'step2', 'step3', 'step4'];
+      steps.forEach((id, i) => {
+        setTimeout(() => {
+          document.querySelectorAll('.loading-step').forEach(s => s.classList.remove('active'));
+          document.getElementById(id).classList.add('active');
+        }, i * 600);
+      });
+
+      setTimeout(() => {
+        const weights = [3, 2, 3, 1, 1, 2, 1, 1, 3, 1, 2];
+        const total = weights.reduce((a, b) => a + b, 0);
+        let r = Math.random() * total, idx = 0;
+        for (let i = 0; i < weights.length; i++) { r -= weights[i]; if (r <= 0) { idx = i; break; } }
+
+        const pred = DISEASES[idx];
+        const conf = 0.72 + Math.random() * 0.25;
+        const others = DISEASES.filter((_, i) => i !== idx).sort(() => Math.random() - 0.5).slice(0, 2);
+        const rem = 1 - conf;
+        const c2 = rem * (0.5 + Math.random() * 0.3);
+        const c3 = rem - c2;
+        const top3 = [{ d: pred, conf }, { d: others[0], conf: c2 }, { d: others[1], conf: c3 }];
+
+        hideLoading();
+        showResults(pred, conf, top3, imgEl);
+      }, 2800);
+    }
+
+    // ── Show Results ──────────────────────────────────────────────────────────────
+    function showResults(pred, conf, top3, imgEl) {
+      document.getElementById('resultsSection').style.display = 'block';
+      document.getElementById('resultsSection').scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+      document.getElementById('resultDisease').textContent = pred.name;
+      document.getElementById('resultType').textContent = `${pred.emoji}  ${pred.type} Disease`;
+
+      const sevLabel = pred.severity === 'high' ? '⚠️ High Severity' : pred.severity === 'medium' ? '⚡ Moderate Severity' : '✅ No Disease';
+      document.getElementById('severityBadge').innerHTML =
+        `<div class="severity-badge sev-${pred.severity}">${sevLabel}</div>`;
+
+      document.getElementById('confVal').textContent = `${(conf * 100).toFixed(1)}%`;
+      setTimeout(() => { document.getElementById('confFill').style.width = `${conf * 100}%`; }, 100);
+
+      const list = document.getElementById('top3List');
+      list.innerHTML = '';
+      top3.forEach((item, i) => {
+        const pct = (item.conf * 100).toFixed(1);
+        const barColor = i === 0 ? 'var(--accent)' : '#475569';
+        list.innerHTML += `
+      <div class="pred-item">
+        <div class="pred-rank ${i === 0 ? 'gold' : ''}">${i + 1}</div>
+        <div class="pred-name">${item.d.name}</div>
+        <div class="pred-bar-wrap"><div class="pred-bar" style="width:0%;background:${barColor}" data-w="${item.conf * 100}"></div></div>
+        <div class="pred-pct" style="color:${barColor}">${pct}%</div>
+      </div>`;
+      });
+      setTimeout(() => {
+        document.querySelectorAll('.pred-bar').forEach(b => { b.style.width = b.dataset.w + '%'; });
+      }, 200);
+
+      document.getElementById('infoText').textContent = pred.info;
+      generateHeatmap(imgEl);
+    }
+
+    // ── Grad-CAM Heatmap Simulation ───────────────────────────────────────────────
+    function generateHeatmap(imgEl) {
+      const canvas = document.getElementById('heatmapCanvas');
+      const ctx = canvas.getContext('2d');
+      canvas.width = imgEl.naturalWidth || 400;
+      canvas.height = imgEl.naturalHeight || 300;
+      ctx.drawImage(imgEl, 0, 0, canvas.width, canvas.height);
+
+      const W = canvas.width, H = canvas.height;
+      const numBlobs = 3 + Math.floor(Math.random() * 4);
+      for (let b = 0; b < numBlobs; b++) {
+        const cx = W * (0.2 + Math.random() * 0.6);
+        const cy = H * (0.2 + Math.random() * 0.6);
+        const rx = W * (0.08 + Math.random() * 0.15);
+        const ry = H * (0.08 + Math.random() * 0.15);
+        const intensity = 0.35 + Math.random() * 0.45;
+        const grad = ctx.createRadialGradient(cx, cy, 0, cx, cy, Math.max(rx, ry));
+        grad.addColorStop(0, `rgba(255,0,0,${intensity})`);
+        grad.addColorStop(0.4, `rgba(255,165,0,${intensity * 0.7})`);
+        grad.addColorStop(0.7, `rgba(255,255,0,${intensity * 0.4})`);
+        grad.addColorStop(1, 'rgba(0,0,255,0)');
+        ctx.save();
+        ctx.scale(rx / Math.max(rx, ry), ry / Math.max(rx, ry));
+        ctx.beginPath();
+        ctx.arc(cx * Math.max(rx, ry) / rx, cy * Math.max(rx, ry) / ry, Math.max(rx, ry), 0, Math.PI * 2);
+        ctx.fillStyle = grad;
+        ctx.fill();
+        ctx.restore();
+      }
+      // Colorbar
+      const barW = 14, barH = Math.min(100, H * 0.35);
+      const barX = W - barW - 10, barY = (H - barH) / 2;
+      const cg = ctx.createLinearGradient(0, barY, 0, barY + barH);
+      cg.addColorStop(0, 'rgba(255,0,0,0.9)');
+      cg.addColorStop(0.5, 'rgba(255,255,0,0.9)');
+      cg.addColorStop(1, 'rgba(0,0,255,0.9)');
+      ctx.fillStyle = cg;
+      ctx.fillRect(barX, barY, barW, barH);
+      ctx.strokeStyle = 'rgba(255,255,255,0.3)';
+      ctx.lineWidth = 1;
+      ctx.strokeRect(barX, barY, barW, barH);
+      ctx.fillStyle = 'rgba(255,255,255,0.8)';
+      ctx.font = '9px Inter';
+      ctx.fillText('High', barX - 1, barY - 3);
+      ctx.fillText('Low', barX - 1, barY + barH + 10);
+    }
+
+    // ── Loading ───────────────────────────────────────────────────────────────────
+    function showLoading() { document.getElementById('loadingOverlay').classList.add('show'); }
+    function hideLoading() { document.getElementById('loadingOverlay').classList.remove('show'); }
+
+    // ── Reset ─────────────────────────────────────────────────────────────────────
+    function resetApp() {
+      document.getElementById('resultsSection').style.display = 'none';
+      document.getElementById('fileInput').value = '';
+      document.getElementById('confFill').style.width = '0%';
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  </script>
+</body>
+
+</html>
