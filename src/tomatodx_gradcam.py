@@ -163,8 +163,8 @@ def overlay_heatmap(
         superimposed: RGB image with heatmap overlay.
     """
     # Resize heatmap to match original image dimensions
-    h, w = original_img.shape[:2]
-    heatmap_resized = cv2.resize(heatmap, (w, h))
+    img_height, img_width = original_img.shape[:2]
+    heatmap_resized = cv2.resize(heatmap, (img_width, img_height))
 
     # Convert heatmap to uint8 and apply colormap
     heatmap_uint8 = np.uint8(255 * heatmap_resized)

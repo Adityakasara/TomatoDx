@@ -6,13 +6,13 @@ Run: python generate_notebook.py
 
 import json, os
 
-def md(src): return {"cell_type":"markdown","metadata":{},"source":src.splitlines(keepends=True)}
-def code(src): return {"cell_type":"code","execution_count":None,"metadata":{},"outputs":[],"source":src.splitlines(keepends=True)}
+def create_markdown_cell(src): return {"cell_type":"markdown","metadata":{},"source":src.splitlines(keepends=True)}
+def create_code_cell(src): return {"cell_type":"code","execution_count":None,"metadata":{},"outputs":[],"source":src.splitlines(keepends=True)}
 
 cells = []
 
 # ── SECTION 0: Title ─────────────────────────────────────────────────────────
-cells.append(md("""# TomatoDx: Deep Learning–Based Tomato Leaf Disease Identification
+cells.append(create_markdown_cell("""# TomatoDx: Deep Learning–Based Tomato Leaf Disease Identification
 ### Pre-Final Year Engineering Project | Computer Vision & Agricultural Informatics
 **Model:** EfficientNetB0 Transfer Learning | **Framework:** TensorFlow/Keras | **Dataset:** PlantVillage
 
@@ -20,7 +20,7 @@ cells.append(md("""# TomatoDx: Deep Learning–Based Tomato Leaf Disease Identif
 """))
 
 # ── SECTION 1: Abstract & Problem Statement ───────────────────────────────────
-cells.append(md("""## 1. Abstract & Problem Statement
+cells.append(create_markdown_cell("""## 1. Abstract & Problem Statement
 
 ### Abstract
 Tomato (*Solanum lycopersicum*) is one of the world's most economically significant vegetable crops, with global production exceeding 180 million tonnes annually. Fungal, bacterial, and viral diseases are responsible for yield losses of 20–40%, costing billions of dollars in agricultural damage each year. Traditional disease diagnosis depends on trained agronomists conducting field inspections — a process that is expensive, time-consuming, and inaccessible to smallholder farmers in developing regions.
@@ -40,8 +40,8 @@ This project presents **TomatoDx**, an automated deep learning system that ident
 """))
 
 # ── SECTION 2: Setup & Imports ────────────────────────────────────────────────
-cells.append(md("## 2. Setup, Imports & Reproducibility"))
-cells.append(code("""# ── Standard Library ────────────────────────────────────────────────────────
+cells.append(create_markdown_cell("## 2. Setup, Imports & Reproducibility"))
+cells.append(create_code_cell("""# ── Standard Library ────────────────────────────────────────────────────────
 import os
 import sys
 import random
@@ -83,7 +83,7 @@ print(f"Python version     : {sys.version.split()[0]}")
 print(f"GPU available      : {len(tf.config.list_physical_devices('GPU')) > 0}")
 """))
 
-cells.append(code("""# ── Reproducibility ──────────────────────────────────────────────────────────
+cells.append(create_code_cell("""# ── Reproducibility ──────────────────────────────────────────────────────────
 # Setting all seeds ensures that results are reproducible across runs.
 # This is essential for academic submissions and fair comparisons.
 SEED = 42
@@ -97,7 +97,7 @@ print(f"All random seeds set to {SEED} — results are reproducible.")
 """))
 
 # ── SECTION 3: Dataset ────────────────────────────────────────────────────────
-cells.append(md("""## 3. Dataset Description
+cells.append(create_markdown_cell("""## 3. Dataset Description
 
 ### PlantVillage Dataset
 The **PlantVillage** dataset (Hughes & Salathé, 2015) is the most widely used benchmark for plant disease classification. It contains **54,306 images** of healthy and diseased plant leaves across 38 classes, collected under controlled laboratory conditions.
@@ -130,7 +130,7 @@ kaggle datasets download -d emmarex/plantdisease -p ./data --unzip
 ```
 """))
 
-cells.append(code("""# ── Configuration ────────────────────────────────────────────────────────────
+cells.append(create_code_cell("""# ── Configuration ────────────────────────────────────────────────────────────
 IMG_SIZE    = (224, 224)   # EfficientNetB0 native input size
 BATCH_SIZE  = 32           # Fits comfortably in 8GB GPU memory
 NUM_CLASSES = 11           # 10 diseases + 1 healthy
@@ -150,7 +150,7 @@ SHORT_NAMES = [n.replace('Tomato_','').replace('_',' ') for n in CLASS_NAMES]
 print("Configuration set. Output directory:", OUTPUT_DIR)
 """))
 
-cells.append(code("""# ── Dataset Preparation: Train / Val / Test Split ────────────────────────────
+cells.append(create_code_cell("""# ── Dataset Preparation: Train / Val / Test Split ────────────────────────────
 # If the dataset is a flat PlantVillage directory (not pre-split),
 # this cell filters tomato classes and creates the 80/10/10 split.
 # IMPORTANT: Splitting is done BEFORE any augmentation to prevent data leakage.
@@ -186,9 +186,9 @@ def prepare_dataset(src_root, dst_root, split=(0.8, 0.1, 0.1), seed=42):
                  glob.glob(os.path.join(class_dir, '*.png'))
         random.shuffle(images)
 
-        n = len(images)
-        n_train = int(n * split[0])
-        n_val   = int(n * split[1])
+        total_images = len(images)
+        n_train = int(total_images * split[0])
+        n_val   = int(total_images * split[1])
 
         splits = {
             'train': images[:n_train],
@@ -199,10 +199,10 @@ def prepare_dataset(src_root, dst_root, split=(0.8, 0.1, 0.1), seed=42):
         for split_name, files in splits.items():
             dst_class = os.path.join(dst_root, split_name, class_name)
             os.makedirs(dst_class, exist_ok=True)
-            for f in files:
-                shutil.copy2(f, dst_class)
+            for image_file in files:
+                shutil.copy2(image_file, dst_class)
 
-        print(f"  {class_name}: {n_train} train | {n_val} val | {n - n_train - n_val} test")
+        print(f"  {class_name}: {n_train} train | {n_val} val | {total_images - n_train - n_val} test")
 
     print(f"\\nDataset prepared at: {dst_root}")
 
@@ -211,7 +211,7 @@ prepare_dataset(src_root='./data/PlantVillage', dst_root=DATA_DIR)
 """))
 
 # ── SECTION 4: Data Preprocessing & Augmentation ─────────────────────────────
-cells.append(md("""## 4. Data Preprocessing & Augmentation
+cells.append(create_markdown_cell("""## 4. Data Preprocessing & Augmentation
 
 ### Design Decisions
 | Step | Value | Rationale |
@@ -229,7 +229,7 @@ cells.append(md("""## 4. Data Preprocessing & Augmentation
 > **Data Leakage Prevention:** Augmentation is applied **only to the training set**. Validation and test sets use only rescaling, ensuring unbiased evaluation.
 """))
 
-cells.append(code("""# ── ImageDataGenerators ───────────────────────────────────────────────────────
+cells.append(create_code_cell("""# ── ImageDataGenerators ───────────────────────────────────────────────────────
 # Training: augmentation + normalization
 train_datagen = ImageDataGenerator(
     rescale=1./255,
@@ -269,7 +269,7 @@ print(f"Test samples  : {test_gen.samples}")
 print(f"Class indices : {train_gen.class_indices}")
 """))
 
-cells.append(code("""# ── Visualize Sample Images & Augmentations ──────────────────────────────────
+cells.append(create_code_cell("""# ── Visualize Sample Images & Augmentations ──────────────────────────────────
 fig, axes = plt.subplots(3, 6, figsize=(18, 9))
 fig.suptitle('Sample Training Images with Augmentation', fontsize=14, fontweight='bold')
 
@@ -289,7 +289,7 @@ plt.show()
 print("Sample images saved.")
 """))
 
-cells.append(code("""# ── Class Distribution Plot ───────────────────────────────────────────────────
+cells.append(create_code_cell("""# ── Class Distribution Plot ───────────────────────────────────────────────────
 import glob
 
 def count_class_images(split='train'):
@@ -318,7 +318,7 @@ plt.show()
 """))
 
 # ── SECTION 5: Model Architecture ────────────────────────────────────────────
-cells.append(md("""## 5. Model Architecture
+cells.append(create_markdown_cell("""## 5. Model Architecture
 
 ### Why EfficientNetB0?
 EfficientNet (Tan & Le, 2019) uses **compound scaling** — simultaneously scaling network width, depth, and resolution using a fixed ratio — achieving state-of-the-art accuracy with significantly fewer parameters than ResNet or VGG.
@@ -364,7 +364,7 @@ Dense(11, Softmax)  ←── Output: 11 class probabilities
 ```
 """))
 
-cells.append(code("""# ── Build Model ──────────────────────────────────────────────────────────────
+cells.append(create_code_cell("""# ── Build Model ──────────────────────────────────────────────────────────────
 def build_tomatodx_model(num_classes=NUM_CLASSES):
     \"\"\"
     Construct TomatoDx model with EfficientNetB0 backbone.
@@ -403,7 +403,7 @@ model, base_model = build_tomatodx_model()
 model.summary()
 """))
 
-cells.append(code("""# ── Parameter Count Summary ───────────────────────────────────────────────────
+cells.append(create_code_cell("""# ── Parameter Count Summary ───────────────────────────────────────────────────
 total      = model.count_params()
 trainable  = sum(tf.size(v).numpy() for v in model.trainable_variables)
 frozen     = total - trainable
@@ -416,7 +416,7 @@ print(f"{'─'*45}")
 """))
 
 # ── SECTION 6: Training ───────────────────────────────────────────────────────
-cells.append(md("""## 6. Training Strategy
+cells.append(create_markdown_cell("""## 6. Training Strategy
 
 ### Two-Phase Transfer Learning
 
@@ -438,7 +438,7 @@ cells.append(md("""## 6. Training Strategy
 | ReduceLROnPlateau | factor=0.5, patience=3 | Adaptive learning rate |
 """))
 
-cells.append(code("""# ── Callbacks ─────────────────────────────────────────────────────────────────
+cells.append(create_code_cell("""# ── Callbacks ─────────────────────────────────────────────────────────────────
 def get_callbacks(phase=1):
     checkpoint_path = os.path.join(OUTPUT_DIR, 'tomatodx_best.keras')
     return [
@@ -459,7 +459,7 @@ def get_callbacks(phase=1):
     ]
 """))
 
-cells.append(code("""# ── Phase 1: Train Classification Head ───────────────────────────────────────
+cells.append(create_code_cell("""# ── Phase 1: Train Classification Head ───────────────────────────────────────
 PHASE1_EPOCHS = 20
 
 print("=" * 55)
@@ -478,7 +478,7 @@ print(f"\\nPhase 1 complete.")
 print(f"Best val_accuracy: {max(history1.history['val_accuracy']):.4f}")
 """))
 
-cells.append(code("""# ── Phase 2: Fine-Tune Top Layers ────────────────────────────────────────────
+cells.append(create_code_cell("""# ── Phase 2: Fine-Tune Top Layers ────────────────────────────────────────────
 PHASE2_EPOCHS    = 20
 FINE_TUNE_LAYERS = 30   # Unfreeze top 30 layers of EfficientNetB0
 
@@ -514,7 +514,7 @@ print(f"Best val_accuracy: {max(history2.history['val_accuracy']):.4f}")
 """))
 
 # ── SECTION 7: Training Curves ────────────────────────────────────────────────
-cells.append(md("""## 7. Training vs Validation Curves
+cells.append(create_markdown_cell("""## 7. Training vs Validation Curves
 
 The plots below show accuracy and loss for both training phases combined.
 A vertical dashed line marks the transition from Phase 1 to Phase 2.
@@ -525,14 +525,14 @@ A vertical dashed line marks the transition from Phase 1 to Phase 2.
 - **Underfitting**: both curves plateau at low values (addressed by fine-tuning in Phase 2)
 """))
 
-cells.append(code("""# ── Plot Training History ─────────────────────────────────────────────────────
+cells.append(create_code_cell("""# ── Plot Training History ─────────────────────────────────────────────────────
 def plot_history(h1, h2, save_path=None):
-    acc     = h1.history['accuracy']     + h2.history['accuracy']
-    val_acc = h1.history['val_accuracy'] + h2.history['val_accuracy']
-    loss    = h1.history['loss']         + h2.history['loss']
-    val_loss= h1.history['val_loss']     + h2.history['val_loss']
-    p1_end  = len(h1.history['accuracy'])
-    epochs  = range(1, len(acc) + 1)
+    acc              = h1.history['accuracy']     + h2.history['accuracy']
+    val_acc          = h1.history['val_accuracy'] + h2.history['val_accuracy']
+    loss             = h1.history['loss']         + h2.history['loss']
+    val_loss         = h1.history['val_loss']     + h2.history['val_loss']
+    phase1_end_epoch = len(h1.history['accuracy'])
+    epochs           = range(1, len(acc) + 1)
 
     fig, axes = plt.subplots(1, 2, figsize=(16, 6))
     fig.suptitle('TomatoDx — Training History', fontsize=14, fontweight='bold')
@@ -545,7 +545,7 @@ def plot_history(h1, h2, save_path=None):
     ):
         ax.plot(epochs, train_vals, 'b-o', ms=3, label='Train')
         ax.plot(epochs, val_vals,   'r-o', ms=3, label='Validation')
-        ax.axvline(x=p1_end, color='gray', ls='--', alpha=0.7, label='Phase 2 Start')
+        ax.axvline(x=phase1_end_epoch, color='gray', ls='--', alpha=0.7, label='Phase 2 Start')
         ax.set_title(title, fontsize=12)
         ax.set_xlabel('Epoch')
         ax.set_ylabel(ylabel)
@@ -562,7 +562,7 @@ plot_history(history1, history2,
              save_path=os.path.join(OUTPUT_DIR, 'training_history.png'))
 """))
 
-cells.append(code("""# ── Overfitting / Underfitting Analysis ──────────────────────────────────────
+cells.append(create_code_cell("""# ── Overfitting / Underfitting Analysis ──────────────────────────────────────
 final_train_acc = history2.history['accuracy'][-1]
 final_val_acc   = history2.history['val_accuracy'][-1]
 gap = final_train_acc - final_val_acc
@@ -581,7 +581,7 @@ else:
 """))
 
 # ── SECTION 8: Evaluation ─────────────────────────────────────────────────────
-cells.append(md("""## 8. Model Evaluation
+cells.append(create_markdown_cell("""## 8. Model Evaluation
 
 ### Metrics Used
 - **Accuracy**: Overall fraction of correct predictions
@@ -591,14 +591,14 @@ cells.append(md("""## 8. Model Evaluation
 - **Confusion Matrix**: Visualizes per-class prediction patterns
 """))
 
-cells.append(code("""# ── Load Best Saved Model ─────────────────────────────────────────────────────
+cells.append(create_code_cell("""# ── Load Best Saved Model ─────────────────────────────────────────────────────
 best_model_path = os.path.join(OUTPUT_DIR, 'tomatodx_best.keras')
 print(f"Loading best model from: {best_model_path}")
 best_model = keras.models.load_model(best_model_path)
 print("Model loaded successfully.")
 """))
 
-cells.append(code("""# ── Generate Predictions on Test Set ─────────────────────────────────────────
+cells.append(create_code_cell("""# ── Generate Predictions on Test Set ─────────────────────────────────────────
 test_gen.reset()
 y_pred_probs = best_model.predict(test_gen, verbose=1)
 y_pred = np.argmax(y_pred_probs, axis=1)
@@ -607,7 +607,7 @@ y_true = test_gen.classes
 print(f"\\nTest samples evaluated: {len(y_true)}")
 """))
 
-cells.append(code("""# ── Compute Metrics ───────────────────────────────────────────────────────────
+cells.append(create_code_cell("""# ── Compute Metrics ───────────────────────────────────────────────────────────
 accuracy  = accuracy_score(y_true, y_pred)
 precision, recall, f1, _ = precision_recall_fscore_support(
     y_true, y_pred, average='macro', zero_division=0
@@ -631,7 +631,7 @@ metrics_df.to_csv(os.path.join(OUTPUT_DIR, 'metrics_summary.csv'), index=False)
 print("\\nMetrics saved to outputs/metrics_summary.csv")
 """))
 
-cells.append(code("""# ── Full Classification Report ────────────────────────────────────────────────
+cells.append(create_code_cell("""# ── Full Classification Report ────────────────────────────────────────────────
 report = classification_report(y_true, y_pred, target_names=SHORT_NAMES, zero_division=0)
 print("\\nPer-Class Classification Report:")
 print(report)
@@ -646,7 +646,7 @@ pd.DataFrame(report_dict).T.to_csv(
 )
 """))
 
-cells.append(code("""# ── Confusion Matrix ──────────────────────────────────────────────────────────
+cells.append(create_code_cell("""# ── Confusion Matrix ──────────────────────────────────────────────────────────
 cm = confusion_matrix(y_true, y_pred)
 cm_norm = cm.astype('float') / cm.sum(axis=1, keepdims=True)
 
@@ -674,7 +674,7 @@ print("Confusion matrix saved.")
 """))
 
 # ── SECTION 9: Save & Load ────────────────────────────────────────────────────
-cells.append(md("""## 9. Model Save & Load for Inference
+cells.append(create_markdown_cell("""## 9. Model Save & Load for Inference
 
 The model is saved in the native Keras format (`.keras`), which preserves:
 - Model architecture
@@ -685,14 +685,14 @@ The model is saved in the native Keras format (`.keras`), which preserves:
 This allows the model to be loaded and used for inference without retraining.
 """))
 
-cells.append(code("""# ── Save Model (already saved by ModelCheckpoint, but shown explicitly) ────────
+cells.append(create_code_cell("""# ── Save Model (already saved by ModelCheckpoint, but shown explicitly) ────────
 save_path = os.path.join(OUTPUT_DIR, 'tomatodx_final.keras')
 best_model.save(save_path)
 print(f"Model saved to: {save_path}")
 print(f"File size: {os.path.getsize(save_path) / 1e6:.1f} MB")
 """))
 
-cells.append(code("""# ── Load Model & Run Inference on a Sample Image ─────────────────────────────
+cells.append(create_code_cell("""# ── Load Model & Run Inference on a Sample Image ─────────────────────────────
 def predict_single_image(model, image_path, class_names=CLASS_NAMES, top_k=3):
     \"\"\"
     Load and preprocess a single image, run inference, return top-k predictions.
@@ -734,7 +734,7 @@ if test_class_dirs:
 """))
 
 # ── SECTION 10: Grad-CAM ──────────────────────────────────────────────────────
-cells.append(md("""## 10. Grad-CAM Visualization
+cells.append(create_markdown_cell("""## 10. Grad-CAM Visualization
 
 **Grad-CAM** (Gradient-weighted Class Activation Mapping, Selvaraju et al., 2017) provides visual explanations for CNN predictions by highlighting the image regions most influential for the predicted class.
 
@@ -749,7 +749,7 @@ cells.append(md("""## 10. Grad-CAM Visualization
 This technique is **model-agnostic** and requires no architectural changes.
 """))
 
-cells.append(code("""# ── GradCAM Class ─────────────────────────────────────────────────────────────
+cells.append(create_code_cell("""# ── GradCAM Class ─────────────────────────────────────────────────────────────
 class GradCAM:
     \"\"\"
     Computes Grad-CAM heatmaps using tf.GradientTape.
@@ -816,7 +816,7 @@ class GradCAM:
 print("GradCAM class defined.")
 """))
 
-cells.append(code("""# ── Find Last Conv Layer in EfficientNetB0 ───────────────────────────────────
+cells.append(create_code_cell("""# ── Find Last Conv Layer in EfficientNetB0 ───────────────────────────────────
 def find_last_conv_layer(model):
     \"\"\"Automatically find the last Conv2D layer name in the model.\"\"\"
     for layer in reversed(model.layers):
@@ -824,9 +824,9 @@ def find_last_conv_layer(model):
             return layer.name
         # Check inside EfficientNet sub-model
         if hasattr(layer, 'layers'):
-            for sub in reversed(layer.layers):
-                if isinstance(sub, layers.Conv2D):
-                    return sub.name
+            for sub_layer in reversed(layer.layers):
+                if isinstance(sub_layer, layers.Conv2D):
+                    return sub_layer.name
     # Fallback for EfficientNetB0
     return 'top_conv'
 
@@ -834,7 +834,7 @@ target_layer = find_last_conv_layer(loaded_model)
 print(f"Target Grad-CAM layer: {target_layer}")
 """))
 
-cells.append(code("""# ── Visualize Grad-CAM for Multiple Test Images ───────────────────────────────
+cells.append(create_code_cell("""# ── Visualize Grad-CAM for Multiple Test Images ───────────────────────────────
 def visualize_gradcam_grid(model, test_gen, class_names, layer_name,
                             n_samples=6, save_path=None):
     \"\"\"
@@ -849,19 +849,19 @@ def visualize_gradcam_grid(model, test_gen, class_names, layer_name,
     pred_probs = model.predict(batch_imgs, verbose=0)
     pred_labels = np.argmax(pred_probs, axis=1)
 
-    n = min(n_samples, len(batch_imgs))
-    fig, axes = plt.subplots(n, 3, figsize=(12, 4 * n))
+    num_display_samples = min(n_samples, len(batch_imgs))
+    fig, axes = plt.subplots(num_display_samples, 3, figsize=(12, 4 * num_display_samples))
     fig.suptitle('Grad-CAM Visualizations — TomatoDx', fontsize=14, fontweight='bold')
 
-    for i in range(n):
+    for i in range(num_display_samples):
         img_array = np.expand_dims(batch_imgs[i], axis=0)
         heatmap = gradcam.compute_heatmap(img_array, class_idx=pred_labels[i])
         overlay = gradcam.overlay(heatmap, batch_imgs_orig[i])
 
-        true_name  = class_names[true_labels[i]].replace('Tomato_','')
-        pred_name  = class_names[pred_labels[i]].replace('Tomato_','')
-        conf       = pred_probs[i][pred_labels[i]] * 100
-        correct    = '✓' if true_labels[i] == pred_labels[i] else '✗'
+        true_name      = class_names[true_labels[i]].replace('Tomato_','')
+        pred_name      = class_names[pred_labels[i]].replace('Tomato_','')
+        confidence_pct = pred_probs[i][pred_labels[i]] * 100
+        correct        = '✓' if true_labels[i] == pred_labels[i] else '✗'
 
         axes[i, 0].imshow(batch_imgs_orig[i])
         axes[i, 0].set_title(f'True: {true_name}', fontsize=8)
@@ -872,7 +872,7 @@ def visualize_gradcam_grid(model, test_gen, class_names, layer_name,
         axes[i, 1].axis('off')
 
         axes[i, 2].imshow(overlay)
-        axes[i, 2].set_title(f'{correct} Pred: {pred_name} ({conf:.1f}%)', fontsize=8)
+        axes[i, 2].set_title(f'{correct} Pred: {pred_name} ({confidence_pct:.1f}%)', fontsize=8)
         axes[i, 2].axis('off')
 
     plt.tight_layout()
@@ -889,7 +889,7 @@ visualize_gradcam_grid(
 """))
 
 # ── SECTION 11: Conclusion ────────────────────────────────────────────────────
-cells.append(md("""## 11. Conclusion & Future Scope
+cells.append(create_markdown_cell("""## 11. Conclusion & Future Scope
 
 ### Conclusion
 This project successfully developed **TomatoDx**, a deep learning system for automated tomato leaf disease identification. The key findings are:
@@ -946,8 +946,8 @@ notebook = {
 }
 
 out_path = os.path.join(os.path.dirname(__file__), 'TomatoDx_Project.ipynb')
-with open(out_path, 'w', encoding='utf-8') as f:
-    json.dump(notebook, f, indent=1, ensure_ascii=False)
+with open(out_path, 'w', encoding='utf-8') as notebook_file:
+    json.dump(notebook, notebook_file, indent=1, ensure_ascii=False)
 
 print(f"Notebook written to: {out_path}")
 print(f"Total cells: {len(cells)}")
