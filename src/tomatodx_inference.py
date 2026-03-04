@@ -105,12 +105,12 @@ def predict(
     top_k_indices = np.argsort(preds)[::-1][:top_k]
 
     results = []
-    for idx in top_k_indices:
-        class_name = CLASS_NAMES[idx]
+    for class_index in top_k_indices:
+        class_name = CLASS_NAMES[class_index]
         results.append(
             {
                 "class": class_name,
-                "confidence": float(preds[idx]) * 100,
+                "confidence": float(preds[class_index]) * 100,
                 "info": DISEASE_INFO.get(class_name, "No information available."),
             }
         )
