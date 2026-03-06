@@ -98,6 +98,42 @@ jupyter notebook TomatoDx_Project.ipynb
 # Run: Kernel → Restart & Run All
 ```
 
+### Local Development with VS Code
+
+This repository includes ready-to-use VS Code configuration in the `.vscode/` directory.
+
+1. **Clone the repository and open in VS Code:**
+   ```bash
+   git clone https://github.com/Adityakasara/TomatoDx.git
+   cd TomatoDx
+   code .
+   ```
+
+2. **Install recommended extensions** — VS Code will prompt you automatically, or open the Extensions view (`Ctrl+Shift+X`) and search `@recommended`.
+
+3. **Create and activate a virtual environment:**
+   ```bash
+   python -m venv venv
+   # macOS/Linux:
+   source venv/bin/activate
+   # Windows:
+   venv\Scripts\activate
+   ```
+
+4. **Install dependencies:**
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+5. **Select the Python interpreter** — Press `Ctrl+Shift+P` → *Python: Select Interpreter* → choose `${workspaceFolder}/venv/bin/python` (Windows: `${workspaceFolder}/venv/Scripts/python.exe`). The `.vscode/settings.json` already defaults to this path.
+
+6. **Run the Jupyter notebook** — Open `TomatoDx_Project.ipynb` in VS Code and click *Run All* (requires the **Jupyter** extension).
+
+7. **Debug training or inference** — Use the *Run and Debug* panel (`Ctrl+Shift+D`) and choose one of the pre-configured launch profiles:
+   - **Train TomatoDx Model** — runs the full training pipeline
+   - **Run Inference** — classifies a single leaf image
+   - **Run Grad-CAM** — generates a Grad-CAM overlay for explainability
+
 ### Command-Line Training
 
 ```bash
